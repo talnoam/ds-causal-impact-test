@@ -1,0 +1,34 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug: Attach to Docker",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5678
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}/app",
+          "remoteRoot": "/app/app"
+        }
+      ],
+      "justMyCode": true
+    },
+    {
+      "name": "Debug: Local (no Docker)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"],
+      "python": "${workspaceFolder}/venv/bin/python",
+      "env": {
+        "DATABASE_PATH": "data/shop.db"
+      },
+      "jinja": true,
+      "justMyCode": true
+    }
+  ]
+}
