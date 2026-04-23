@@ -7,7 +7,13 @@ def load_orders() -> pd.DataFrame:
     query = """
         SELECT order_id, user_id, created_at, amount, product_category, is_refund
         FROM orders
-        WHERE amount > 0  -- Remove test/invalid orders
+        -- Bug fix reference: app/data_processing.py load_orders() WHERE clause
+        -- previously used `amount > 0`, which dropped negative refunds and
+        -- converted the target from Net Revenue to Gross Revenue.
+        -- Using `amount != 0` removes zero-value test orders while preserving
+        -- refund transactions, restoring variance structure and business logic
+        -- required for valid causal impact inference on net outcomes.
+        WHERE amount != 0
     """
     df = query_df(query)
     df["created_at"] = pd.to_datetime(df["created_at"])

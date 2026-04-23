@@ -7,10 +7,21 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from causalimpact import CausalImpact
+import numpy as np
 
 from app.data_processing import build_analysis_dataframe
 
-DEFAULT_COVARIATES = ["organic_sessions", "email_campaigns_sent", "avg_discount_pct"]
+# Bug fix reference: app/causal_analysis.py DEFAULT_COVARIATES previously included
+# `email_campaigns_sent` and `avg_discount_pct`, both campaign-linked variables
+# affected by treatment intensity and timing.
+# Including treatment-affected covariates leaks intervention signal into the
+# synthetic-control baseline (post-treatment endogeneity), attenuating the
+# estimated effect toward zero and increasing false negatives.
+# We keep only `organic_sessions`, which is an exogenous demand proxy that is
+# not directly manipulated by the email campaign and improves baseline fit by
+# capturing non-campaign traffic trend.
+DEFAULT_COVARIATES = ["organic_sessions"]
+RANDOM_SEED = 42
 
 _results_store: dict[str, dict] = {}
 
@@ -23,6 +34,7 @@ def run_analysis(
     if covariates is None:
         covariates = DEFAULT_COVARIATES
 
+    np.random.seed(RANDOM_SEED)
     df, pre_period, post_period = build_analysis_dataframe(
         intervention_date, covariates
     )
