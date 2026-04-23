@@ -7,21 +7,23 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from causalimpact import CausalImpact
-import numpy as np
 
 from app.data_processing import build_analysis_dataframe
 
-# Bug fix reference: app/causal_analysis.py DEFAULT_COVARIATES previously included
-# `email_campaigns_sent` and `avg_discount_pct`, both campaign-linked variables
-# affected by treatment intensity and timing.
-# Including treatment-affected covariates leaks intervention signal into the
-# synthetic-control baseline (post-treatment endogeneity), attenuating the
-# estimated effect toward zero and increasing false negatives.
-# We keep only `organic_sessions`, which is an exogenous demand proxy that is
-# not directly manipulated by the email campaign and improves baseline fit by
-# capturing non-campaign traffic trend.
-DEFAULT_COVARIATES = ["organic_sessions"]
-RANDOM_SEED = 42
+# --- Covariates Selection Strategy ---
+# 1. EXCLUDE `email_campaigns_sent`: This is the treatment itself (Leakage).
+# 2. EXCLUDE `avg_discount_pct`, `returning_customer_pct`, `site_conversion_rate`: 
+#    These are highly endogenous. Email campaigns are sent to existing lists (inflating returning_customer_pct) 
+#    and usually contain coupons (inflating avg_discount_pct and site_conversion_rate).
+#    Including them will swallow the causal effect into the synthetic control.
+# 3. INCLUDE `organic_sessions`: Stable proxy for baseline store demand.
+# 4. INCLUDE `paid_sessions`: Controls for Confounding Factors (e.g., concurrent ad-spend).
+# 5. INCLUDE `is_weekend`: Captures day-of-week seasonality (engineered in data_processing).
+DEFAULT_COVARIATES = [
+    "organic_sessions", 
+    "paid_sessions", 
+    "is_weekend"
+]
 
 _results_store: dict[str, dict] = {}
 
@@ -34,11 +36,15 @@ def run_analysis(
     if covariates is None:
         covariates = DEFAULT_COVARIATES
 
-    np.random.seed(RANDOM_SEED)
     df, pre_period, post_period = build_analysis_dataframe(
         intervention_date, covariates
     )
 
+    # Added random_seed parameter before CausalImpact model instantiation
+    # to ensure reproducibility of the stochastic Bayesian posterior sampling.
+    import numpy as np
+    np.random.seed(42)
+    
     ci = CausalImpact(df, pre_period, post_period, alpha=alpha)
 
     analysis_id = str(uuid.uuid4())[:8]

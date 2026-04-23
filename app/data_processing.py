@@ -51,12 +51,19 @@ def build_analysis_dataframe(
 
     df = daily_revenue.merge(metrics, on="date", how="inner")
 
+    # --- Feature Engineering: Seasonality ---
+    # Statistical Rationale: E-commerce revenue exhibits strong day-of-week 
+    # seasonality. Explicitly defining weekends allows the BSTS model to 
+    # capture cyclical variance that isn't explained by traffic volume alone.
+    df["is_weekend"] = df["date"].dt.dayofweek.isin([5, 6]).astype(int)
+
     intervention_dt = pd.to_datetime(intervention_date)
     pre_start = df["date"].min().strftime("%Y-%m-%d")
     pre_end = (intervention_dt - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
     post_start = intervention_dt.strftime("%Y-%m-%d")
     post_end = df["date"].max().strftime("%Y-%m-%d")
 
+    # Ensure we dynamically pull the newly engineered features if requested
     columns = ["date", "revenue"] + [c for c in covariates if c in df.columns]
     df = df[columns].set_index("date")
 
