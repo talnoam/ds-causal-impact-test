@@ -20,8 +20,6 @@ from app.data_processing import build_analysis_dataframe
 # 4. INCLUDE `paid_sessions`: Controls for Confounding Factors (e.g., concurrent ad-spend).
 # 5. INCLUDE `is_weekend`: Captures day-of-week seasonality (engineered in data_processing).
 DEFAULT_COVARIATES = [
-    "organic_sessions", 
-    "paid_sessions", 
     "is_weekend"
 ]
 
